@@ -1,0 +1,46 @@
+name: APK oluştur
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: En yeni zip'i bul ve aç
+        run: |
+          ZIP=$(git log -1 --name-only --pretty=format: --diff-filter=AM -- '*.zip' | grep -i '\.zip$' | head -n 1)
+          echo "Kullanılan zip: $ZIP"
+          unzip -o "$ZIP" -d build-src
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: APK derle
+        working-directory: build-src
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: APK adını ayarla
+        run: cp build-src/app/build/outputs/apk/release/app-release.apk MasaustuTarayici.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: surum-${{ github.run_id }}
+          name: Masaüstü Tarayıcı – derleme ${{ github.run_number }}
+          files: MasaustuTarayici.apk
