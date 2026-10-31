@@ -1,0 +1,41 @@
+name: APK oluştur
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tarayici-proje.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Projeyi aç
+        run: unzip -o tarayici-proje.zip -d build-src
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: APK derle
+        working-directory: build-src
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: APK adını ayarla
+        run: cp build-src/app/build/outputs/apk/release/app-release.apk MasaustuTarayici.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Masaüstü Tarayıcı ${{ github.run_number }}
+          files: MasaustuTarayici.apk
